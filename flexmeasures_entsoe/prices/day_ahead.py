@@ -8,9 +8,7 @@ from flexmeasures import Source, Sensor
 
 from flexmeasures.data.transactional import task_with_status_report
 
-from flexmeasures.data.schemas import (
-    SensorIdField
-)
+from flexmeasures.data.schemas import SensorIdField
 from flexmeasures.data.schemas.sources import DataSourceIdField
 
 
@@ -26,6 +24,7 @@ from ..utils import (
     ensure_sensors,
     save_entsoe_series,
     abort_if_data_empty,
+    resample_if_needed,
     start_import_log,
 )
 
@@ -82,8 +81,8 @@ def import_day_ahead_prices(
     to_date: Optional[datetime] = None,
     country_code: Optional[str] = None,
     country_timezone: Optional[str] = None,
-    sensor : Optional[Sensor] = None,
-    source : Optional[Source] = None
+    sensor: Optional[Sensor] = None,
+    source: Optional[Source] = None,
 ):
     """
     Import forecasted prices for any date range, defaulting to today and tomorrow.
@@ -94,7 +93,7 @@ def import_day_ahead_prices(
     country_code, country_timezone = ensure_country_code_and_timezone(
         country_code, country_timezone
     )
-    
+
     if source is None:
         entsoe_data_source = ensure_data_source()
     else:
@@ -124,11 +123,11 @@ def import_day_ahead_prices(
         country_code, start=from_time, end=until_time
     )
     abort_if_data_empty(prices)
+    prices = resample_if_needed(prices, pricing_sensor)
     log.debug("Prices: \n%s" % prices)
 
     if not dryrun:
         log.info(f"Saving {len(prices)} beliefs for Sensor {pricing_sensor.name} ...")
-        prices.name = "event_value"  # required by timely_beliefs, TODO: check if that still is the case, see https://github.com/SeitaBV/timely-beliefs/issues/64
         save_entsoe_series(
             prices, pricing_sensor, entsoe_data_source, country_timezone, now
         )

@@ -98,6 +98,10 @@ def ensure_sensors(
             )
             db.session.add(sensor)
             sensors_created = True
+        elif sensor.event_resolution != event_resolution:
+            current_app.logger.warning(
+                f"The {sensor_name} sensor exists, but has a resolution of {sensor.event_resolution} instead of {event_resolution}. Please refer the 'October 1st 2025 go-live' instructions in `README.md`."
+            )
         sensor.data_by_entsoe = data_by_entsoe
         sensors[sensor_name] = sensor
     if sensors_created:
@@ -219,7 +223,7 @@ def resample_if_needed(s: pd.Series, sensor: Sensor) -> pd.Series:
             s.index[0],
             s.index[-1] + inferred_resolution,
             freq=target_resolution,
-            closed="left",
+            inclusive="left",
         )
         s = s.reindex(index).pad()
     elif inferred_resolution < target_resolution:
